@@ -34,7 +34,7 @@ Runs **20 automated security checks** including:
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vulnscan.git
+git clone https://github.com/YOUR_USERNAME/vulnscan-app.git
 cd vulnscan
 pip install -r requirements.txt
 python app.py
