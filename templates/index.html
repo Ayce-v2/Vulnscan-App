@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VulnScan — Endpoint Security Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #080c10; --surface: #0e1419; --border: #1e2d3d;
+    --accent: #00d4aa; --accent2: #0af; --red: #ff4757;
+    --orange: #ffa502; --green: #2ed573; --yellow: #eccc68;
+    --dim: #4a5568; --text: #c9d4e0; --textdim: #607080;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Syne', sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,170,0.015) 2px, rgba(0,212,170,0.015) 4px);
+  }
+  .grid-bg {
+    position: fixed; inset: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(0,212,170,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,170,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; position: relative; z-index: 1; }
+
+  /* Header */
+  header { text-align: center; padding: 3rem 0 2.5rem; }
+  .logo-line { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem; }
+  .logo-icon { width: 44px; height: 44px; border: 2px solid var(--accent); border-radius: 8px; display: grid; place-items: center; position: relative; overflow: hidden; }
+  .logo-icon::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,212,170,0.2), transparent); }
+  .logo-icon svg { width: 22px; height: 22px; fill: var(--accent); position: relative; z-index: 1; }
+  h1 { font-family: var(--sans); font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .tagline { font-size: 0.78rem; color: var(--textdim); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.4rem; }
+  .version-badge { display: inline-block; margin-top: 1rem; font-size: 0.68rem; color: var(--accent); border: 1px solid rgba(0,212,170,0.3); padding: 0.2rem 0.7rem; border-radius: 999px; letter-spacing: 0.1em; }
+
+  /* Disclaimer */
+  .disclaimer { background: rgba(255,71,87,0.07); border: 1px solid rgba(255,71,87,0.3); border-left: 3px solid var(--red); border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 1.8rem; font-size: 0.78rem; line-height: 1.7; color: #d4aab0; }
+  .disclaimer strong { color: var(--red); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .disclaimer-check { display: flex; align-items: flex-start; gap: 0.75rem; margin-top: 1rem; cursor: pointer; }
+  .disclaimer-check input[type=checkbox] { appearance: none; width: 16px; height: 16px; min-width: 16px; border: 1.5px solid var(--red); border-radius: 3px; background: transparent; cursor: pointer; position: relative; margin-top: 2px; transition: background 0.2s; }
+  .disclaimer-check input[type=checkbox]:checked { background: var(--red); border-color: var(--red); }
+  .disclaimer-check input[type=checkbox]:checked::after { content: '✓'; position: absolute; top: -1px; left: 2px; font-size: 11px; color: white; font-weight: 700; }
+  .disclaimer-check span { font-size: 0.76rem; color: #c0808a; line-height: 1.5; user-select: none; }
+
+  /* Scan card */
+  .scan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.8rem; margin-bottom: 2rem; position: relative; overflow: hidden; }
+  .scan-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .input-row { display: flex; gap: 0.75rem; align-items: stretch; }
+  input[type=text] { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; font-family: var(--mono); font-size: 0.88rem; color: var(--text); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+  input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,170,0.12); }
+  input[type=text]::placeholder { color: var(--dim); }
+  .btn-scan { background: linear-gradient(135deg, var(--accent), #00b890); border: none; border-radius: 8px; padding: 0 1.8rem; font-family: var(--sans); font-size: 0.88rem; font-weight: 700; color: #080c10; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s, transform 0.1s; white-space: nowrap; }
+  .btn-scan:hover { opacity: 0.9; }
+  .btn-scan:active { transform: scale(0.98); }
+  .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; animation: none !important; }
+  .checks-label { font-size: 0.7rem; color: var(--textdim); margin-bottom: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .checks-count { font-size: 0.72rem; color: var(--accent); margin-top: 0.75rem; }
+  @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,170,0.4); } 50% { box-shadow: 0 0 0 6px rgba(0,212,170,0); } }
+  .btn-scan:not(:disabled) { animation: pulse-glow 2.5s infinite; }
+
+  /* Progress */
+  #progress-section { display: none; margin-bottom: 2rem; }
+  .terminal-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+  .terminal { background: #040609; border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; font-size: 0.78rem; color: var(--accent); min-height: 80px; line-height: 1.8; overflow-y: auto; max-height: 220px; }
+  .progress-bar-wrap { margin-top: 1rem; background: var(--border); border-radius: 999px; height: 4px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 999px; width: 0%; transition: width 0.4s ease; }
+
+  /* Results */
+  #results-section { display: none; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; text-align: center; }
+  .stat-num { font-family: var(--sans); font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem; }
+  .stat-label { font-size: 0.65rem; color: var(--textdim); letter-spacing: 0.12em; text-transform: uppercase; }
+  .stat-card.crit .stat-num { color: var(--red); }
+  .stat-card.fail .stat-num { color: var(--orange); }
+  .stat-card.warn .stat-num { color: var(--yellow); }
+  .stat-card.pass .stat-num { color: var(--green); }
+  .stat-card.total .stat-num { color: var(--accent); }
+
+  /* Export buttons */
+  .export-bar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; align-items: center; }
+  .export-label { font-size: 0.7rem; color: var(--textdim); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 0.25rem; }
+  .btn-export { background: transparent; border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 1.1rem; font-family: var(--mono); font-size: 0.75rem; color: var(--text); cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; display: flex; align-items: center; gap: 0.5rem; }
+  .btn-export:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,170,0.06); }
+  .btn-export.xlsx:hover { border-color: var(--green); color: var(--green); background: rgba(46,213,115,0.06); }
+  .btn-export .icon { font-size: 1rem; }
+
+  /* Section title */
+  .section-title { font-size: 0.7rem; color: var(--textdim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-btn { background: transparent; border: 1px solid var(--border); border-radius: 5px; padding: 0.3rem 0.75rem; font-family: var(--mono); font-size: 0.68rem; color: var(--textdim); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; }
+  .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,170,0.08); }
+  .filter-btn.f-fail.active { border-color: var(--red); color: var(--red); background: rgba(255,71,87,0.08); }
+  .filter-btn.f-warn.active { border-color: var(--yellow); color: var(--yellow); background: rgba(236,204,104,0.08); }
+  .filter-btn.f-pass.active { border-color: var(--green); color: var(--green); background: rgba(46,213,115,0.08); }
+
+  /* Result items */
+  .result-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; transition: border-color 0.2s; }
+  .result-item:hover { border-color: rgba(0,212,170,0.3); }
+  .result-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1.2rem; cursor: pointer; user-select: none; }
+  .status-badge { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; padding: 0.25rem 0.6rem; border-radius: 4px; min-width: 48px; text-align: center; }
+  .badge-PASS { background: rgba(46,213,115,0.15); color: var(--green); border: 1px solid rgba(46,213,115,0.3); }
+  .badge-FAIL { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+  .badge-WARN { background: rgba(236,204,104,0.15); color: var(--yellow); border: 1px solid rgba(236,204,104,0.3); }
+  .badge-ERROR { background: rgba(74,85,104,0.3); color: var(--dim); border: 1px solid var(--border); }
+  .sev-badge { font-size: 0.58rem; letter-spacing: 0.08em; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; }
+  .sev-CRITICAL { background: rgba(255,71,87,0.2); color: #ff6b7a; }
+  .sev-HIGH { background: rgba(255,165,2,0.2); color: #ffb733; }
+  .sev-MEDIUM { background: rgba(236,204,104,0.2); color: var(--yellow); }
+  .sev-LOW { background: rgba(46,213,115,0.2); color: var(--green); }
+  .sev-UNKNOWN { background: rgba(74,85,104,0.2); color: var(--dim); }
+  .result-name { flex: 1; font-size: 0.85rem; font-weight: 500; }
+  .cve-tag { font-size: 0.62rem; color: var(--textdim); font-family: var(--mono); }
+  .chevron { font-size: 0.6rem; color: var(--textdim); transition: transform 0.2s; }
+  .result-item.open .chevron { transform: rotate(90deg); }
+  .result-body { display: none; padding: 0 1.2rem 1rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+  .result-item.open .result-body { display: block; }
+  .issue-list { list-style: none; margin-top: 0.75rem; }
+  .issue-list li { font-size: 0.78rem; color: #d0c4c4; line-height: 1.6; padding: 0.35rem 0 0.35rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); position: relative; }
+  .issue-list li::before { content: '›'; position: absolute; left: 0; color: var(--red); }
+  .no-issues { font-size: 0.78rem; color: var(--green); margin-top: 0.75rem; padding-left: 1rem; position: relative; }
+  .no-issues::before { content: '✓'; position: absolute; left: 0; }
+  .fix-box { margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(0,212,170,0.05); border: 1px solid rgba(0,212,170,0.15); border-radius: 6px; font-size: 0.75rem; color: #a8d5c2; line-height: 1.6; }
+  .fix-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; margin-bottom: 0.3rem; }
+  .scan-meta { font-size: 0.7rem; color: var(--textdim); margin-top: 0.5rem; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .result-item { animation: fadeUp 0.3s ease both; }
+
+  footer { text-align: center; font-size: 0.65rem; color: var(--dim); margin-top: 3rem; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="container">
+
+  <header>
+    <div class="logo-line">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l6 2.67V11c0 3.83-2.56 7.42-6 8.76C8.56 18.42 6 14.83 6 11V7.67L12 5z"/>
+        </svg>
+      </div>
+      <h1>VulnScan</h1>
+    </div>
+    <p class="tagline">Endpoint Vulnerability Scanner</p>
+    <span class="version-badge">v2.0 · 100+ Checks · CVE-Aware · Export Ready</span>
+  </header>
+
+  <div class="disclaimer">
+    <strong>⚠ Authorization Required</strong><br><br>
+    This tool performs active security testing. Unauthorized scanning is <strong style="color:var(--red)">illegal</strong> under
+    the U.S. Computer Fraud and Abuse Act (CFAA), UK Computer Misuse Act, and equivalent laws worldwide.
+    Only scan systems you own or have explicit written permission to test.
+    <label class="disclaimer-check">
+      <input type="checkbox" id="auth-check"/>
+      <span>I confirm I am authorized to scan the target and accept full responsibility for my actions.</span>
+    </label>
+  </div>
+
+  <div class="scan-card">
+    <div class="checks-label">Target Endpoint</div>
+    <div class="input-row">
+      <input type="text" id="url-input" placeholder="https://example.com" autocomplete="off" spellcheck="false"/>
+      <button class="btn-scan" id="scan-btn" onclick="startScan()">▶ SCAN</button>
+    </div>
+    <div class="checks-count">
+      Scanning for <strong style="color:var(--accent)">100+ vulnerabilities</strong> — SQLi, XSS, SSRF, JWT, GraphQL, CORS, path traversal, XXE, SSTI, CVE-2021-44228, CVE-2022-22965, CVE-2023-44487 &amp; many more
+    </div>
+  </div>
+
+  <div id="progress-section">
+    <div class="terminal-header">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="font-size:0.7rem; color: var(--textdim); margin-left:0.5rem;">scan.log</span>
+    </div>
+    <div class="terminal" id="terminal-log"></div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <div id="results-section">
+    <div class="summary-grid" id="summary-grid"></div>
+
+    <div class="export-bar">
+      <span class="export-label">Export Report:</span>
+      <button class="btn-export" onclick="exportReport('csv')">
+        <span class="icon">📄</span> Download CSV
+      </button>
+      <button class="btn-export xlsx" onclick="exportReport('xlsx')">
+        <span class="icon">📊</span> Download Excel
+      </button>
+    </div>
+
+    <div class="section-title">Scan Results</div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL', this)">ALL</button>
+      <button class="filter-btn f-fail" data-filter="FAIL" onclick="setFilter('FAIL', this)">FAIL</button>
+      <button class="filter-btn f-warn" data-filter="WARN" onclick="setFilter('WARN', this)">WARN</button>
+      <button class="filter-btn f-pass" data-filter="PASS" onclick="setFilter('PASS', this)">PASS</button>
+      <button class="filter-btn" data-filter="CRITICAL" onclick="setFilter('CRITICAL', this)">CRITICAL</button>
+      <button class="filter-btn" data-filter="HIGH" onclick="setFilter('HIGH', this)">HIGH</button>
+      <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM', this)">MEDIUM</button>
+    </div>
+
+    <div id="results-list"></div>
+  </div>
+</div>
+
+<footer>VulnScan v2.0 — For authorized security testing only · Use responsibly</footer>
+
+<script>
+let scanData = null;
+let currentFilter = 'ALL';
+
+const logLines = [
+  "Initializing scan engine v2.0...",
+  "Loading 100+ vulnerability modules...",
+  "Establishing session...",
+  "Probing security headers...",
+  "Testing SSL/TLS configuration...",
+  "Checking CORS policy...",
+  "Probing SQL injection vectors...",
+  "Testing XSS reflection...",
+  "Scanning for sensitive files...",
+  "Checking cookie security flags...",
+  "Testing HTTP methods...",
+  "Probing directory listing...",
+  "Checking open redirect...",
+  "Testing clickjacking protection...",
+  "Probing rate limiting...",
+  "Checking information disclosure...",
+  "Scanning admin panels...",
+  "Testing path traversal...",
+  "Probing SSRF vectors...",
+  "Sending Log4Shell probe (CVE-2021-44228)...",
+  "Testing Spring4Shell (CVE-2022-22965)...",
+  "Checking Shellshock (CVE-2014-6271)...",
+  "Verifying HSTS...",
+  "Testing GraphQL introspection...",
+  "Probing GraphQL depth attacks...",
+  "Checking JWT algorithm (none) bypass...",
+  "Testing JWT weak secrets...",
+  "Scanning for API keys in URLs...",
+  "Probing mass assignment...",
+  "Testing API rate limiting...",
+  "Scanning Swagger/OpenAPI exposure...",
+  "Testing HTTP parameter pollution...",
+  "Checking host header injection...",
+  "Probing XXE vulnerabilities...",
+  "Testing SSTI payloads...",
+  "Probing command injection...",
+  "Testing insecure deserialization...",
+  "Checking LDAP injection...",
+  "Testing file upload security...",
+  "Probing CRLF injection...",
+  "Checking WebSocket security...",
+  "Testing content type sniffing...",
+  "Checking SRI on external resources...",
+  "Scanning for verbose error pages...",
+  "Testing session fixation...",
+  "Checking account enumeration...",
+  "Probing IDOR vulnerabilities...",
+  "Testing OAuth misconfiguration...",
+  "Scanning debug endpoints...",
+  "Checking missing auth on API...",
+  "Testing server timing leak...",
+  "Checking permissions policy...",
+  "Probing proxy header abuse...",
+  "Checking ProxyLogon (CVE-2021-26855)...",
+  "Checking F5 BIG-IP (CVE-2022-1388)...",
+  "Testing HTTP/2 Rapid Reset (CVE-2023-44487)...",
+  "Probing prototype pollution...",
+  "Testing cache poisoning...",
+  "Checking dependency confusion...",
+  "Probing HTTP request smuggling...",
+  "Testing SAML endpoints...",
+  "Checking password reset security...",
+  "Probing ReDoS patterns...",
+  "Checking weak default credentials...",
+  "Aggregating results...",
+  "Generating remediation advice...",
+];
+
+let logInterval = null;
+let logIdx = 0;
+
+function ts() { return new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+function appendLog(line) {
+  const el = document.getElementById('terminal-log');
+  el.innerHTML += `<span style="color:var(--textdim)">[<span style="color:var(--accent)">${ts()}</span>]</span> ${line}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function startLogAnimation() {
+  logIdx = 0;
+  document.getElementById('terminal-log').innerHTML = '';
+  logInterval = setInterval(() => {
+    if (logIdx < logLines.length) {
+      appendLog(logLines[logIdx++]);
+      document.getElementById('progress-bar').style.width = Math.min(90, (logIdx / logLines.length) * 90) + '%';
+    }
+  }, 200);
+}
+
+function stopLogAnimation() {
+  clearInterval(logInterval);
+  appendLog('<span style="color:var(--green)">✓ Scan complete. Rendering results...</span>');
+  document.getElementById('progress-bar').style.width = '100%';
+}
+
+async function startScan() {
+  const url = document.getElementById('url-input').value.trim();
+  const agreed = document.getElementById('auth-check').checked;
+  if (!agreed) { alert('Please confirm the authorization disclaimer before scanning.'); return; }
+  if (!url) { alert('Please enter a target URL.'); return; }
+
+  document.getElementById('scan-btn').disabled = true;
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('progress-section').style.display = 'block';
+  scanData = null;
+  startLogAnimation();
+
+  try {
+    const res = await fetch('/scan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url, agreed})
+    });
+    const data = await res.json();
+    scanData = data;
+    stopLogAnimation();
+    setTimeout(() => renderResults(data), 600);
+  } catch(e) {
+    stopLogAnimation();
+    appendLog(`<span style="color:var(--red)">ERROR: ${e.message}</span>`);
+  } finally {
+    document.getElementById('scan-btn').disabled = false;
+  }
+}
+
+function renderResults({results, summary}) {
+  const order = {FAIL:0, WARN:1, ERROR:2, PASS:3};
+  const sevOrder = {CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3, UNKNOWN:4};
+  results.sort((a,b) => {
+    if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+    return sevOrder[a.severity] - sevOrder[b.severity];
+  });
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="stat-card total"><div class="stat-num">${summary.total}</div><div class="stat-label">Checks Run</div></div>
+    <div class="stat-card crit"><div class="stat-num">${summary.critical}</div><div class="stat-label">Critical</div></div>
+    <div class="stat-card fail"><div class="stat-num">${summary.fail}</div><div class="stat-label">Failed</div></div>
+    <div class="stat-card warn"><div class="stat-num">${summary.warn}</div><div class="stat-label">Warnings</div></div>
+    <div class="stat-card pass"><div class="stat-num">${summary.pass}</div><div class="stat-label">Passed</div></div>
+    <div class="stat-card total"><div class="stat-num">${summary.elapsed}s</div><div class="stat-label">Scan Time</div></div>
+  `;
+
+  renderList(results);
+
+  const meta = document.createElement('p');
+  meta.className = 'scan-meta';
+  meta.innerHTML = `Scanned: <span style="color:var(--accent)">${esc(summary.url)}</span> · ${summary.timestamp} · ${summary.elapsed}s`;
+  document.getElementById('results-list').appendChild(meta);
+
+  document.getElementById('results-section').style.display = 'block';
+}
+
+function renderList(results) {
+  const list = document.getElementById('results-list');
+  // Remove old items but keep meta if present
+  Array.from(list.querySelectorAll('.result-item')).forEach(el => el.remove());
+
+  const filtered = currentFilter === 'ALL' ? results
+    : results.filter(r => r.status === currentFilter || r.severity === currentFilter);
+
+  filtered.forEach((r, i) => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.style.animationDelay = `${i * 0.03}s`;
+    item.dataset.status = r.status;
+    item.dataset.severity = r.severity;
+
+    const issueHTML = r.issues && r.issues.length
+      ? `<ul class="issue-list">${r.issues.map(iss => `<li>${esc(iss)}</li>`).join('')}</ul>`
+      : `<p class="no-issues">No issues detected</p>`;
+
+    const fixHTML = r.fix
+      ? `<div class="fix-box"><div class="fix-label">🔧 Recommended Fix</div>${esc(r.fix)}</div>`
+      : '';
+
+    item.innerHTML = `
+      <div class="result-header" onclick="toggleItem(this)">
+        <span class="status-badge badge-${r.status}">${r.status}</span>
+        <span class="sev-badge sev-${r.severity}">${r.severity}</span>
+        <span class="result-name">${esc(r.name)}</span>
+        <span class="cve-tag">${esc(r.cve)}</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="result-body">${issueHTML}${fixHTML}</div>
+    `;
+    list.insertBefore(item, list.querySelector('.scan-meta'));
+  });
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (scanData) renderList(scanData.results);
+}
+
+function toggleItem(header) { header.parentElement.classList.toggle('open'); }
+
+async function exportReport(format) {
+  if (!scanData) { alert('Run a scan first!'); return; }
+  try {
+    const res = await fetch(`/export/${format}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(scanData)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error || 'Export failed');
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vulnscan-report.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Export error: ' + e.message);
+  }
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); });
+});
+</script>
+</body>
+</html>
